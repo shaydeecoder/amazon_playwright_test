@@ -1,0 +1,16 @@
+{
+  "name": "amazon_playwright_test",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.54.1",
+    "@types/node": "^24.1.0"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:chrome": "playwright test home.spec.ts --project chromium",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report"
+  }
+}
