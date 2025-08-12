@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 
 const WEBSITE_URL = "https://www.jumia.com.ng";
 const SEARCH_VALUE = "Chair";
@@ -70,34 +70,8 @@ test.describe("Cart Page", () => {
 
     await page.goto(WEBSITE_URL);
 
-    // Search for a product
-    const searchField = page.getByRole("textbox", { name: "Search" });
-    await searchField.pressSequentially(SEARCH_VALUE);
-
-    // Wait for navigation triggered by search
-    await Promise.all([
-      page.waitForURL(/catalog\/\?q=/, { waitUntil: "domcontentloaded" }),
-      searchField.press("Enter"),
-    ]);
-
-    // Wait for products to load
-    const products = page.locator("article.prd");
-    await expect(products.first()).toBeVisible();
-    const firstProduct = products.first();
-    await firstProduct.hover();
-
-    // Add first product to cart
-    firstProduct
-      .getByRole("button", {
-        name: "Add to cart",
-      })
-      .waitFor({ state: "visible" });
-
-    await firstProduct
-      .getByRole("button", {
-        name: "Add to cart",
-      })
-      .click();
+    // Add item to cart
+    await addProductToCart(page);
 
     // Locate cart button and badge
     const navCartButton = page.getByRole("link", { name: "Cart", exact: true });
@@ -108,8 +82,9 @@ test.describe("Cart Page", () => {
   });
 
   // test("should view cart and see added products", async ({ page }) => {
-  //   test.slow();
-  //   await page.goto(WEBSITE_URL);
+  // test.slow();
+
+  // await page.goto(WEBSITE_URL);
 
   //   await page.locator("#nav-button-cart").waitFor({ state: "visible" });
 
@@ -159,3 +134,34 @@ test.describe("Cart Page", () => {
   //   }
   // });
 });
+
+async function addProductToCart(page: Page) {
+  // Search for a product
+  const searchField = page.getByRole("textbox", { name: "Search" });
+  await searchField.pressSequentially(SEARCH_VALUE);
+
+  // Wait for navigation triggered by search
+  await Promise.all([
+    page.waitForURL(/catalog\/\?q=/, { waitUntil: "domcontentloaded" }),
+    searchField.press("Enter"),
+  ]);
+
+  // Wait for products to load
+  const products = page.locator("article.prd");
+  await expect(products.first()).toBeVisible();
+  const firstProduct = products.first();
+  await firstProduct.hover();
+
+  // Add first product to cart
+  firstProduct
+    .getByRole("button", {
+      name: "Add to cart",
+    })
+    .waitFor({ state: "visible" });
+
+  await firstProduct
+    .getByRole("button", {
+      name: "Add to cart",
+    })
+    .click();
+}
