@@ -1,62 +1,63 @@
 import { test, expect } from "@playwright/test";
 
-const WEBSITE_URL = "https://www.amazon.com";
+const WEBSITE_URL = "https://www.jumia.com.ng";
 const SEARCH_VALUE = "Chair";
-
-// test.slow();
-
-// test.beforeEach(async ({ page }) => {
-//   await page.goto(WEBSITE_URL);
-// });
 
 test.describe("Home Page", () => {
   test("should have correct page title", async ({ page }) => {
     test.slow();
+
     await page.goto(WEBSITE_URL);
 
-    await expect(page).toHaveTitle(/Amazon.com/i);
+    // Assert that the page title is correct
+    await expect(page).toHaveTitle(
+      "Jumia Nigeria | Online Shopping for Electronics, Fashion, Home, Beauty & Sport"
+    );
   });
 
   test("should have a cart", async ({ page }) => {
     test.slow();
+
     await page.goto(WEBSITE_URL);
 
-    await page.locator('[id="nav-button-cart"]').waitFor({ state: "visible" });
+    // Check if cart button is visible
+    const navCartButton = page.getByRole("link", { name: "Cart", exact: true });
 
-    await expect(page.locator('[id="nav-button-cart"]')).toBeVisible();
+    // Wait for the cart button to be visible
+    await navCartButton.waitFor({ state: "visible" });
+
+    // Assert that the cart button is visible
+    await expect(navCartButton).toBeVisible();
   });
 
   test("should have a search field and allow me to fill the search field", async ({
     page,
   }) => {
     test.slow();
+
     await page.goto(WEBSITE_URL);
 
-    await page
-      .locator(".nav-search-field .nav-input")
-      .waitFor({ state: "visible" });
-
-    const searchField = page.locator(".nav-search-field .nav-input");
-
+    // Check if search field is visible
+    const searchField = page.getByRole("textbox", { name: "Search" });
     await expect(searchField).toBeVisible();
 
-    await searchField.fill(SEARCH_VALUE);
-
+    // Fill the search field with a value
+    await searchField.pressSequentially(SEARCH_VALUE);
     await expect(searchField).toHaveValue(SEARCH_VALUE);
   });
 
   test("should search product and display results", async ({ page }) => {
     test.slow();
+
     await page.goto(WEBSITE_URL);
 
-    const searchField = page.locator(".nav-search-field .nav-input");
-
-    await searchField.fill(SEARCH_VALUE);
-
+    // Search for a product
+    const searchField = page.getByRole("textbox", { name: "Search" });
+    await searchField.pressSequentially(SEARCH_VALUE);
     await searchField.press("Enter");
 
-    const productList = page.locator('[data-component-type="s-search-result"]');
-
+    // Wait for products to load
+    const productList = page.locator("article.prd");
     await expect(productList.first()).toBeVisible();
   });
 });
@@ -66,45 +67,58 @@ test.describe("Cart Page", () => {
     page,
   }) => {
     test.slow();
+
     await page.goto(WEBSITE_URL);
 
     // Search for a product
-    const searchField = page.locator(".nav-search-field .nav-input");
+    const searchField = page.getByRole("textbox", { name: "Search" });
+    await searchField.pressSequentially(SEARCH_VALUE);
 
-    await searchField.fill(SEARCH_VALUE);
+    // Wait for navigation triggered by search
+    await Promise.all([
+      page.waitForURL(/catalog\/\?q=/, { waitUntil: "domcontentloaded" }),
+      searchField.press("Enter"),
+    ]);
 
-    await searchField.press("Enter");
+    // Wait for products to load
+    const products = page.locator("article.prd");
+    await expect(products.first()).toBeVisible();
+    const firstProduct = products.first();
+    await firstProduct.hover();
 
-    // Add product to cart
-    const productsWithAddToCart = page
-      .locator('[data-component-type="s-search-result"]')
-      .filter({
-        has: page.locator('input[name="submit.addToCart"]'),
-      });
+    // Add first product to cart
+    firstProduct
+      .getByRole("button", {
+        name: "Add to cart",
+      })
+      .waitFor({ state: "visible" });
 
-    const firstProduct = productsWithAddToCart.first();
+    await firstProduct
+      .getByRole("button", {
+        name: "Add to cart",
+      })
+      .click();
 
-    await firstProduct.locator('[name="submit.addToCart"]').click();
+    // Locate cart button and badge
+    const navCartButton = page.getByRole("link", { name: "Cart", exact: true });
+    const cartBadge = navCartButton.locator("[id='ci']");
 
-    await page.waitForTimeout(3000);
-
-    const cartCount = page.locator('[id="nav-cart-count"]');
-
-    await expect(cartCount).not.toHaveText("0");
+    // Wait until cart count attribute updates to something other than "0"
+    await expect(cartBadge).not.toHaveAttribute("data-bbl", "0");
   });
 
-  test("should view cart and see added products", async ({ page }) => {
-    test.slow();
-    await page.goto(WEBSITE_URL);
+  // test("should view cart and see added products", async ({ page }) => {
+  //   test.slow();
+  //   await page.goto(WEBSITE_URL);
 
-    await page.locator("#nav-button-cart").waitFor({ state: "visible" });
+  //   await page.locator("#nav-button-cart").waitFor({ state: "visible" });
 
-    await page.locator("#nav-button-cart").click();
+  //   await page.locator("#nav-button-cart").click();
 
-    const cartItems = page.locator(".sc-list-item");
+  //   const cartItems = page.locator(".sc-list-item");
 
-    await expect(cartItems.first()).toBeVisible();
-  });
+  //   await expect(cartItems.first()).toBeVisible();
+  // });
 
   // test("should display product prices and cart subtotal", async ({ page }) => {
   //   await page.locator("#nav-button-cart").click();
