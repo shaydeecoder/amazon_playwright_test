@@ -63,9 +63,7 @@ test.describe("Home Page", () => {
 });
 
 test.describe("Cart Page", () => {
-  test("should add a product to cart and update cart count", async ({
-    page,
-  }) => {
+  test("should add product to cart and update cart count", async ({ page }) => {
     test.slow();
 
     await page.goto(WEBSITE_URL);
@@ -81,58 +79,61 @@ test.describe("Cart Page", () => {
     await expect(cartBadge).not.toHaveAttribute("data-bbl", "0");
   });
 
-  // test("should view cart and see added products", async ({ page }) => {
-  // test.slow();
+  test("should view cart and see added products", async ({ page }) => {
+    test.slow();
 
-  // await page.goto(WEBSITE_URL);
+    await page.goto(WEBSITE_URL);
 
-  //   await page.locator("#nav-button-cart").waitFor({ state: "visible" });
+    // Add product to cart
+    await addProductToCart(page);
 
-  //   await page.locator("#nav-button-cart").click();
+    // Wait for cart badge to change
+    const navCartButton = page.getByRole("link", { name: "Cart" });
+    await expect(navCartButton.locator("#ci")).not.toHaveAttribute(
+      "data-bbl",
+      "0"
+    );
 
-  //   const cartItems = page.locator(".sc-list-item");
+    // Navigate to cart page
+    await navCartButton.click();
+    await expect(page).toHaveURL(/.*\/cart.*/);
 
-  //   await expect(cartItems.first()).toBeVisible();
-  // });
+    // Verify that the product is in the cart
+    const cartItems = page.locator(".prd");
+    await expect(cartItems.first()).toBeVisible();
+  });
 
-  // test("should display product prices and cart subtotal", async ({ page }) => {
-  //   await page.locator("#nav-button-cart").click();
+  test("should display cart summary that shows subtotal and checkout button", async ({
+    page,
+  }) => {
+    test.slow();
 
-  //   const price = page.locator(".sc-product-price");
-  //   const subtotal = page.locator("#sc-subtotal-amount-activecart");
+    await page.goto(WEBSITE_URL);
 
-  //   await expect(price.first()).toBeVisible();
-  //   await expect(subtotal).toBeVisible();
-  // });
+    // Add product to cart
+    await addProductToCart(page);
 
-  // test("should remove item from cart and update cart count", async ({
-  //   page,
-  // }) => {
-  //   await page.goto("https://www.amazon.com/gp/cart/view.html");
-  //   const deleteBtn = page.locator('[value="Delete"]');
-  //   const initialCount = await page.locator("#nav-cart-count").textContent();
+    // Wait for cart badge to change
+    const navCartButton = page.getByRole("link", { name: "Cart" });
+    await expect(navCartButton.locator("#ci")).not.toHaveAttribute(
+      "data-bbl",
+      "0"
+    );
 
-  //   if ((await deleteBtn.count()) > 0) {
-  //     await deleteBtn.first().click();
-  //     await page.waitForTimeout(2000); // give time for DOM update
-  //     const newCount = await page.locator("#nav-cart-count").textContent();
-  //     expect(Number(newCount)).toBeLessThan(Number(initialCount));
-  //   }
-  // });
+    // Navigate to cart page
+    await navCartButton.click();
+    await expect(page).toHaveURL(/.*\/cart.*/);
 
-  // test("should proceed to checkout", async ({ page }) => {
-  //   await page.goto("https://www.amazon.com/gp/cart/view.html");
-  //   const checkoutButton = page.locator(
-  //     'input[name="proceedToRetailCheckout"]'
-  //   );
-  //   if (await checkoutButton.isVisible()) {
-  //     await checkoutButton.click();
-  //     await expect(page).toHaveURL(/.*\/gp\/buy\/.*|.*\/signin.*/);
-  //   } else {
-  //     // test.skip('No items in cart to proceed to checkout');
-  //     test.skip();
-  //   }
-  // });
+    // Cart summary should be visible
+    await expect(page.getByText("CART SUMMARY")).toBeVisible();
+
+    // Subtotal should be visible
+    await expect(page.getByText("Subtotal", { exact: false })).toBeVisible();
+
+    // Checkout button should be visible
+    const checkoutButton = page.getByRole("link", { name: /^Checkout/ });
+    await expect(checkoutButton).toBeVisible();
+  });
 });
 
 async function addProductToCart(page: Page) {
@@ -150,18 +151,20 @@ async function addProductToCart(page: Page) {
   const products = page.locator("article.prd");
   await expect(products.first()).toBeVisible();
   const firstProduct = products.first();
+
+  // Ensure the product is in view before hovering
+  await firstProduct.scrollIntoViewIfNeeded();
+
+  // Hover over the first product to reveal the "Add to cart" button
   await firstProduct.hover();
+  await page.waitForTimeout(300);
 
-  // Add first product to cart
-  firstProduct
-    .getByRole("button", {
-      name: "Add to cart",
-    })
-    .waitFor({ state: "visible" });
+  // Now find the add-to-cart button *inside* that hovered card
+  const addToCartBtn = firstProduct.locator("footer .add.btn", {
+    hasText: "Add to cart",
+  });
 
-  await firstProduct
-    .getByRole("button", {
-      name: "Add to cart",
-    })
-    .click();
+  // Wait until add-to-cart button is visible and then click it
+  await addToCartBtn.waitFor({ state: "visible" });
+  await addToCartBtn.click();
 }
